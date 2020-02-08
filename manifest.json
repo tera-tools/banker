@@ -1,0 +1,11 @@
+{
+    "files": {
+        "index.js": "1b51ff358ba5eb65eed604b3591b5a038a7a00803bab62497248df4c13b79ccd",
+        "messages.json": "95c8ea4118968efc9b705aa317f2006db862ab25de45a39eb834ed87e3b348a2",
+        "module.json": "0b6f3f567fe302ad530966437b83412c263f7a98c234c92b7a5663410ac69a8b",
+        "settings.js": "b99ca40e95dd044ee1438b648c3a5e6770898c8b989f37675fdf34335532c107"
+    },
+    "defs": {
+        "S_SYSTEM_MESSAGE": 1
+    }
+}

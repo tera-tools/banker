@@ -1,0 +1,21 @@
+{
+    "disableAutoUpdate": true,
+    "author": "tera-tools",
+    "options": {
+        "niceName": "Banker",
+        "guiName": "Banker",
+        "loadOn": "versioncheck",
+        "reloadable": true,
+        "settingsVersion": 1,
+        "settingsFile": "config.json",
+        "settingsMigrator": "settings.js",
+        "settingsAutosaveOnClose": true
+    },
+    "supportUrl": "https://github.com/tera-tools/banker",
+    "servers": ["https://raw.githubusercontent.com/tera-tools/banker/master/"],
+    "name": "banker",
+    "description": "Bank items easier",
+    "packets": {
+        "S_SYSTEM_MESSAGE": 1
+    }
+}
