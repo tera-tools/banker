@@ -3,11 +3,13 @@ const fs = require('fs');
 
 module.exports = function Banker(mod) {
   const BANK_CONTRACT = 26;
-  const BANK_CONTIANER_TYPE = 1;
+  const BANK_TYPE = 1;
+  const BANK_PAGE_SLOTS = 72;
   const ERROR = '#ff0000';
 
   let bankInventory;
   let currentContract;
+  let onNextOffset;
 
   //started or closed contract (window)
   mod.hook('S_REQUEST_CONTRACT', 1, event => {
@@ -25,10 +27,11 @@ module.exports = function Banker(mod) {
     if (!mod.game.me.is(event.gameId))
         return;
     
-    if (event.type == BANK_CONTIANER_TYPE) {
+    if (event.type == BANK_TYPE) {
       mod.log('bank updated');
       currentContract = BANK_CONTRACT;
       bankInventory = event;
+      if (onNextOffset) onNextOffset(event);
     }
   });
 
@@ -51,6 +54,15 @@ module.exports = function Banker(mod) {
     mod.log(event);
   });
 
+  mod.hook('C_VIEW_WARE', 2, event => {
+    mod.log('view');
+    mod.log(event);
+  });
+  mod.hook('C_VIEW_WARE', 2, {filter:{fake: true}}, event => {
+    mod.log('view fake');
+    mod.log(event);
+  });   
+
   mod.command.add('bank', {
     $default() {
     },
@@ -61,11 +73,11 @@ module.exports = function Banker(mod) {
       }
 
       mod.log('contract: ' + currentContract);
-      autoDeposit();
+      autoDeposit(true);
     }
   });
 
-  function autoDeposit() {
+  function autoDeposit(allTabs) {
     let bagItems = mod.game.inventory.bagItems.slice(0);
     let bankItems = bankInventory.items.slice(0);
 
@@ -93,6 +105,13 @@ module.exports = function Banker(mod) {
           bIdx++;
         }
       }
+
+      if (allTabs) {
+        let next = getNextOffset(bankInventory);
+        if (next != undefined) {
+          changeBankOffset(next, () => autoDeposit(allTabs));
+        }
+      }
     }
 
     depositNext();
@@ -101,7 +120,7 @@ module.exports = function Banker(mod) {
   function depositItem(bagItem, offset) {
     mod.send('C_PUT_WARE_ITEM', 3, {
       gameId: mod.game.me.gameId,
-      type: 1,
+      type: BANK_TYPE,
       page: offset,
       money: 0,
       pocket: 0,
@@ -114,8 +133,38 @@ module.exports = function Banker(mod) {
     });
   }
 
+  function getNextOffset(bank) {
+    mod.log(bank.slots);
+    mod.log(bank.offset);
+    mod.log(bank.offset + BANK_PAGE_SLOTS);
+    if (bank.offset + BANK_PAGE_SLOTS < bank.slots)
+      return bank.offset + BANK_PAGE_SLOTS;
+  }
+
+  function changeBankOffset(offset, callback) {
+    let bankLoaded;
+    onNextOffset = event => {
+      bankLoaded = true;
+      onNextOffset = false;
+      callback(event);
+    };
+    
+    setTimeout(() => {
+      if (!bankLoaded)
+        msg('Failed to load next bank page.');
+    }, 1000);
+
+    setTimeout(() => {
+      mod.send('C_VIEW_WARE', 2, {
+        gameId: mod.game.me.gameId,
+        type: BANK_TYPE,
+        offset: offset
+      });
+    }, getRandomDelay());
+  }
+
   function getRandomDelay() {
-    return 200 + Math.floor(Math.random() * 200);
+    return 100 + Math.floor(Math.random() * 100);
   }
 
   function msg(text, color) {
