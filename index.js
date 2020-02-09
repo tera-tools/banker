@@ -18,7 +18,7 @@ module.exports = function Banker(mod) {
     }
   });
   mod.hook('S_CANCEL_CONTRACT', 1, event => {
-    if (mod.game.me.gameId == event.senderId) {
+    if (mod.game.me.is(event.senderId)) {
       currentContract = null;
     }
   });
@@ -63,8 +63,30 @@ module.exports = function Banker(mod) {
     mod.log(event);
   });   
 
+  //exlude items by deposit
+  //exlude items by id
+
   mod.command.add('bank', {
     $default() {
+    },
+    human() {
+      mod.settings.human = !mod.settings.human;w
+      mod.saveSettings();
+      msg('Human mode ' + (mod.settings.human ? 'enabled' : 'disabled'));
+    },
+    tab() {
+      //force deposit tab
+      autoDeposit(false);
+    },
+    all() {
+      //force deposit all
+      autoDeposit(true);
+    },
+    mode() {
+      //force deposit tab
+      mod.settings.tab = !mod.settings.tab;
+      mod.saveSettings();
+      msg('Single tab mode ' + (mod.settings.tab ? 'enabled' : 'disabled'));
     },
     $none() {
       if (currentContract != BANK_CONTRACT) {
@@ -72,8 +94,7 @@ module.exports = function Banker(mod) {
         return;
       }
 
-      mod.log('contract: ' + currentContract);
-      autoDeposit(true);
+      autoDeposit(!mod.settings.tab);
     }
   });
 
@@ -90,6 +111,8 @@ module.exports = function Banker(mod) {
       //iterate both lists and find matching items to deposit
       while (aIdx < bagItems.length && bIdx < bankItems.length) {
         if (bagItems[aIdx].id === bankItems[bIdx].id) {
+          if (currentContract != BANK_CONTRACT)
+            return;
           depositItem(bagItems[aIdx], bankInventory.offset);
   
           aIdx++;
