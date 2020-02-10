@@ -5,6 +5,7 @@ module.exports = function Banker(mod) {
   const BANK_CONTRACT = 26;
   const BANK_TYPE = 1;
   const BANK_PAGE_SLOTS = 72;
+  const PAGE_CHANGE_TIMEOUT = 1000;
   const ERROR = '#ff0000';
 
   const PROTOCOLS = [
@@ -20,8 +21,17 @@ module.exports = function Banker(mod) {
   let onNextOffset;
   let blacklist = new Set();
   let blacklistNext;
+  let blacklistNextAll;
 
   loadConfig();
+
+  //we are already in a game, mod was likely reloaded
+  if (mod.game.me.gameId) {
+    validateProtocolMap();
+  }
+  mod.on('enter_game', () => {
+    validateProtocolMap();
+  });
 
   //started or closed contract (window)
   mod.hook('S_REQUEST_CONTRACT', 1, event => {
@@ -83,7 +93,7 @@ module.exports = function Banker(mod) {
     },
     human() {
       mod.settings.human = !mod.settings.human;
-      mod.saveSettings();
+      saveConfig();
       msg('Human mode ' + (mod.settings.human ? 'enabled' : 'disabled'));
     },
     tab() {
@@ -107,7 +117,7 @@ module.exports = function Banker(mod) {
     mode() {
       //update tab mode
       mod.settings.tab = !mod.settings.tab;
-      mod.saveSettings();
+      saveConfig();
       msg('Single tab mode ' + (mod.settings.tab ? 'enabled' : 'disabled'));
     },
     blacklist(...args) {
@@ -118,6 +128,7 @@ module.exports = function Banker(mod) {
             if (checkArgs(args, 2, () => Number.isInteger(args[1]) && args[1] > 0)) {
               msg(`Item ${args[1]} added to blacklist`);
               blacklist.add(args[1]);
+              saveConfig();
             }
             break;
           case 'r':
@@ -125,11 +136,25 @@ module.exports = function Banker(mod) {
             if (checkArgs(args, 2, () => Number.isInteger(args[1]) && args[1] > 0)) {
               msg(`Item ${args[1]} removed from blacklist`);
               blacklist.remove(args[1]);
+              saveConfig();
             }
             break;
           case 'next':
-            msg('Next banked or retrieved item will be blacklisted');
-            blacklistNext = true;
+            blacklistNext = !blacklistNext;
+            if (blacklistNext) {
+              msg('Next banked or retrieved item will be blacklisted');
+            } else {
+              msg('Blacklist next item disabled');
+            }
+            break;
+          case 'mode':
+            blacklistNextAll = !blacklistNextAll;
+            if (blacklistNext) {
+              msg('Next banked or retrieved items will be blacklisted');
+              msg('Use "banker blacklist mode" to disable');
+            } else {
+              msg('Blacklist mode disabled');
+            }
             break;
         }
       }
@@ -137,6 +162,8 @@ module.exports = function Banker(mod) {
     $none() {
       //deposit based on settings
       if (checkBankOpen()) {
+        blacklistNext = false;
+        blacklistNextAll = false;;
         autoDeposit(!mod.settings.tab);
       }
     }
@@ -151,7 +178,7 @@ module.exports = function Banker(mod) {
   }
 
   function tryBlacklistNext(item) {
-    if (blacklistNext) {
+    if (blacklistNext || blacklistNextAll) {
       blacklist.add(item.id);
       msg(`Item ${item.id} added to blacklist`);
       blacklistNext = false;
@@ -227,9 +254,6 @@ module.exports = function Banker(mod) {
   }
 
   function getNextOffset(bank) {
-    mod.log(bank.slots);
-    mod.log(bank.offset);
-    mod.log(bank.offset + BANK_PAGE_SLOTS);
     if (bank.offset + BANK_PAGE_SLOTS < bank.slots)
       return bank.offset + BANK_PAGE_SLOTS;
   }
@@ -244,8 +268,8 @@ module.exports = function Banker(mod) {
     
     setTimeout(() => {
       if (!bankLoaded)
-        msg('Failed to load next bank page.');
-    }, 1000);
+        msg('Failed to load next bank page.', ERROR);
+    }, PAGE_CHANGE_TIMEOUT);
 
     setTimeout(() => {
       mod.send('C_VIEW_WARE', 2, {
@@ -268,6 +292,7 @@ module.exports = function Banker(mod) {
   function validateProtocolMap() {
     try {
       let missing = [];
+      disabled = false;
 
 			for (var name in PROTOCOLS) {
         var valid = mod.dispatch.protocolMap.name.get(name);
@@ -288,7 +313,11 @@ module.exports = function Banker(mod) {
   }
 
   function getRandomDelay() {
-    return 100 + Math.floor(Math.random() * 100);
+    if (mod.settings.human) {
+      return 100 + Math.floor(Math.random() * 100);
+    } else {
+      return 100 + Math.floor(Math.random() * 100);
+    }
   }
 
   function msg(text, color) {
