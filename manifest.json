@@ -6,6 +6,9 @@
         "settings.js": "b99ca40e95dd044ee1438b648c3a5e6770898c8b989f37675fdf34335532c107"
     },
     "defs": {
-        "S_SYSTEM_MESSAGE": 1
+        "S_VIEW_WARE_EX": 1,
+        "C_GET_WARE_ITEM": 3,
+        "C_PUT_WARE_ITEM": 3,
+        "C_VIEW_WARE": 2
     }
 }

@@ -7,9 +7,21 @@ module.exports = function Banker(mod) {
   const BANK_PAGE_SLOTS = 72;
   const ERROR = '#ff0000';
 
+  const PROTOCOLS = [
+    'C_GET_WARE_ITEM',
+    'C_PUT_WARE_ITEM',
+    'C_VIEW_WARE',
+    'S_VIEW_WARE_EX'
+  ];
+
+  let disabled;
   let bankInventory;
   let currentContract;
   let onNextOffset;
+  let blacklist = new Set();
+  let blacklistNext;
+
+  loadConfig();
 
   //started or closed contract (window)
   mod.hook('S_REQUEST_CONTRACT', 1, event => {
@@ -35,11 +47,10 @@ module.exports = function Banker(mod) {
     }
   });
 
-  let lastevent;
   mod.hook('C_GET_WARE_ITEM', 3, event => {
-    mod.log('get: ' + lastevent === undefined? '':(new Date() - lastevent));
-    lastevent = new Date();
-    //mod.log(event);
+    mod.log('get');
+    mod.log(event);
+    tryBlacklistNext(event);
   });
   mod.hook('C_GET_WARE_ITEM', 3, {filter:{fake: true}}, event => {
     mod.log('get fake');
@@ -48,6 +59,7 @@ module.exports = function Banker(mod) {
   mod.hook('C_PUT_WARE_ITEM', 3, event => {
     mod.log('put');
     mod.log(event);
+    tryBlacklistNext(event);
   });
   mod.hook('C_PUT_WARE_ITEM', 3, {filter:{fake: true}}, event => {
     mod.log('put fake');
@@ -63,40 +75,97 @@ module.exports = function Banker(mod) {
     mod.log(event);
   });   
 
-  //exlude items by deposit
-  //exlude items by id
+  //TODO: exlude items by deposit
+  //TODO: exlude items by id
 
   mod.command.add('bank', {
     $default() {
     },
     human() {
-      mod.settings.human = !mod.settings.human;w
+      mod.settings.human = !mod.settings.human;
       mod.saveSettings();
       msg('Human mode ' + (mod.settings.human ? 'enabled' : 'disabled'));
     },
     tab() {
       //force deposit tab
-      autoDeposit(false);
+      if (checkBankOpen()) {
+        autoDeposit(false);
+      }
     },
     all() {
       //force deposit all
-      autoDeposit(true);
+      if (checkBankOpen()) {
+        if (bankInventory.offset != 0) {
+          changeBankOffset(0, () => {
+            autoDeposit(true);
+          });
+          return;
+        }
+        autoDeposit(true);
+      }
     },
     mode() {
-      //force deposit tab
+      //update tab mode
       mod.settings.tab = !mod.settings.tab;
       mod.saveSettings();
       msg('Single tab mode ' + (mod.settings.tab ? 'enabled' : 'disabled'));
     },
-    $none() {
-      if (currentContract != BANK_CONTRACT) {
-        msg('Bank must be open to use banker module', ERROR);
-        return;
+    blacklist(...args) {
+      if (checkArgs(args, 1)) {
+        switch (args[0]) {
+          case 'a':
+          case 'add':
+            if (checkArgs(args, 2, () => Number.isInteger(args[1]) && args[1] > 0)) {
+              msg(`Item ${args[1]} added to blacklist`);
+              blacklist.add(args[1]);
+            }
+            break;
+          case 'r':
+          case 'remove':
+            if (checkArgs(args, 2, () => Number.isInteger(args[1]) && args[1] > 0)) {
+              msg(`Item ${args[1]} removed from blacklist`);
+              blacklist.remove(args[1]);
+            }
+            break;
+          case 'next':
+            msg('Next banked or retrieved item will be blacklisted');
+            blacklistNext = true;
+            break;
+        }
       }
-
-      autoDeposit(!mod.settings.tab);
+    },
+    $none() {
+      //deposit based on settings
+      if (checkBankOpen()) {
+        autoDeposit(!mod.settings.tab);
+      }
     }
   });
+
+  function checkArgs(args, len, condition) {
+    if (args.length < len && (!condition || condition())) {
+      msg('Invalid arguments.', ERROR);
+      return false;
+    }
+    return false;
+  }
+
+  function tryBlacklistNext(item) {
+    if (blacklistNext) {
+      blacklist.add(item.id);
+      msg(`Item ${item.id} added to blacklist`);
+      blacklistNext = false;
+    }
+  }
+
+  function checkBankOpen() {
+    if (currentContract != BANK_CONTRACT) {
+      msg('Bank must be open to use banker module', ERROR);
+      return true;
+    }
+
+    return false;
+  }
 
   function autoDeposit(allTabs) {
     let bagItems = mod.game.inventory.bagItems.slice(0);
@@ -113,7 +182,8 @@ module.exports = function Banker(mod) {
         if (bagItems[aIdx].id === bankItems[bIdx].id) {
           if (currentContract != BANK_CONTRACT)
             return;
-          depositItem(bagItems[aIdx], bankInventory.offset);
+          if (!blacklist.has(bagItems[aIdx].id))
+            depositItem(bagItems[aIdx], bankInventory.offset);
   
           aIdx++;
           bIdx++;
@@ -184,6 +254,37 @@ module.exports = function Banker(mod) {
         offset: offset
       });
     }, getRandomDelay());
+  }
+
+  function loadConfig() {
+    blacklistNext = new Set(mod.settings.blacklist);
+  }
+
+  function saveConfig() {
+    mod.settings.blacklist = Array.from(blacklistNext);
+    mod.saveSettings();
+  }
+
+  function validateProtocolMap() {
+    try {
+      let missing = [];
+
+			for (var name in PROTOCOLS) {
+        var valid = mod.dispatch.protocolMap.name.get(name);
+        if (valid === undefined || valid == null) {
+          missing.push(name);
+        }
+      }
+      
+      if (missing.length) {
+        let errorText = missing.join(', ') + ' are missing in the protocol map. Install missing protocols before using banker.';
+        msg(errorText, ERROR);
+        mod.error(errorText);
+        disabled = true;
+      }
+		} catch (e) {
+			mod.error(e);
+		}
   }
 
   function getRandomDelay() {

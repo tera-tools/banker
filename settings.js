@@ -1,8 +1,9 @@
 "use strict"
 
 const DefaultSettings = {
-    "human": false,
-    
+    'human': false,
+    'allTabs': true,
+    'blacklist': []
 }
 
 module.exports = function MigrateSettings(from_ver, to_ver, settings) {
