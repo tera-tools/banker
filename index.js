@@ -63,7 +63,7 @@ module.exports = function Banker(mod) {
   mod.hook('C_GET_WARE_ITEM', 3, event => {
     mod.log('get');
     mod.log(event);
-    tryBlacklistNext(event);
+    tryBlacklistNext(event, false);
   });
   mod.hook('C_GET_WARE_ITEM', 3, {filter:{fake: true}}, event => {
     mod.log('get fake');
@@ -72,7 +72,7 @@ module.exports = function Banker(mod) {
   mod.hook('C_PUT_WARE_ITEM', 3, event => {
     mod.log('put');
     mod.log(event);
-    tryBlacklistNext(event);
+    tryBlacklistNext(event, true);
   });
   mod.hook('C_PUT_WARE_ITEM', 3, {filter:{fake: true}}, event => {
     mod.log('put fake');
@@ -101,6 +101,7 @@ module.exports = function Banker(mod) {
       if (checkDisabled()) return; 
       //force deposit tab
       if (checkBankOpen()) {
+        msg('Depositing items in this tab');
         autoDeposit(false);
       }
     },
@@ -108,13 +109,8 @@ module.exports = function Banker(mod) {
       if (checkDisabled()) return;
       //force deposit all
       if (checkBankOpen()) {
-        if (bankInventory.offset != 0) {
-          changeBankOffset(0, () => {
-            autoDeposit(true);
-          });
-          return;
-        }
-        autoDeposit(true);
+        msg('Depositing items in all tabs');
+        depositAllTabs();
       }
     },
     mode() {
@@ -124,61 +120,22 @@ module.exports = function Banker(mod) {
       msg('Single tab mode ' + (mod.settings.tab ? 'enabled' : 'disabled'));
     },
     blacklist(...args) {
-      if (checkArgs(args, 1)) {
-        switch (args[0]) {
-          case 'a':
-          case 'add':
-            if (args.length == 1) {
-              if (checkDisabled()) return;
-              blacklistMode = blacklistMode ? BlacklistModes.NONE : blacklistModes.ADD;
-            } else if (Number.isInteger(args[1]) && args[1] > 0) {
-              msg(`Item ${args[1]} added to blacklist`);
-              blacklist.add(args[1]);
-              saveConfig();
-            } else {
-              argsError();
-            }
-            break;
-          case 'r':
-          case 'remove':            
-            if (args.length == 1) {
-              if (checkDisabled()) return;
-              blacklistMode = blacklistMode ? BlacklistModes.NONE : blacklistModes.REMOVE;
-            } else if (Number.isInteger(args[1]) && args[1] > 0) {
-              msg(`Item ${args[1]} removed from blacklist`);
-              blacklist.add(args[1]);
-              saveConfig();
-            } else {
-              argsError();
-            }
-            break;
-          case 'mode':
-            if (checkDisabled()) return;
-            blacklistMode = blacklistMode ? BlacklistModes.NONE : blacklistModes.ANY;
-            if (blacklistMode) {
-              msg('Next banked or retrieved items will be blacklisted');
-              msg('Use "bank blacklist mode" to disable');
-            } else {
-              msg('Blacklist mode disabled');
-            }
-            break;
-          case 'clear':
-            msg('Blacklist cleared');
-            blacklist.clear();
-            saveConfig();
-            break;
-        }
-      }
+      processBlacklistCommand(args);
     },
     bl(...args){
-      blacklist(args);
+      processBlacklistCommand(args);
     },
     $none() {
       if (checkDisabled()) return;
       //deposit based on settings
       if (checkBankOpen()) {
         blacklistMode = BlacklistModes.NONE;
-        autoDeposit(!mod.settings.tab);
+        msg('Depositing items in ' + (mod.settings.tab ? 'this tab' : 'all tabs'));
+        if (mod.settings.tab) {
+          autoDeposit(false);
+        } else {
+          depositAllTabs();
+        }
       }
     }
   });
@@ -193,21 +150,100 @@ module.exports = function Banker(mod) {
     return disabled
   }
 
-  function tryBlacklistNext(item) {
-    if (blacklistNext || blacklistNextAll) {
+  function depositAllTabs() {
+    if (bankInventory.offset != 0) {
+      changeBankOffset(0, () => {
+        autoDeposit(true);
+      });
+      return;
+    }
+    autoDeposit(true);
+  }
+
+  function processBlacklistCommand(args) {
+    mod.log(args);
+    if (args.length >= 1) {
+      switch (args[0]) {
+        case 'a':
+        case 'add':
+          if (args.length == 1) {
+            if (checkDisabled()) return;
+            blacklistMode = blacklistMode ? BlacklistModes.NONE : BlacklistModes.ADD;
+            msg(`Next item deposited or retrieved will be added to blacklist`);
+          } else if (args.length == 2 && isNormalInteger(args[1])) {
+            msg(`Item ${args[1]} added to blacklist`);
+            blacklist.add(args[1]);
+            saveConfig();
+          } else {
+            argsError();
+          }
+          break;
+        case 'r':
+        case 'remove':            
+          if (args.length == 1) {
+            if (checkDisabled()) return;
+            blacklistMode = blacklistMode ? BlacklistModes.NONE : BlacklistModes.REMOVE;
+            msg(`Next item deposited or retrieved will be removed from blacklist`);
+          } else if (args.length == 2 && isNormalInteger(args[1])) {
+            msg(`Item ${args[1]} removed from blacklist`);
+            blacklist.add(args[1]);
+            saveConfig();
+          } else {
+            argsError();
+          }
+          break;
+        case 'mode':
+          if (checkDisabled()) return;
+          blacklistMode = blacklistMode ? BlacklistModes.NONE : BlacklistModes.ANY;
+          if (blacklistMode) {
+            msg('Next banked or retrieved items will be blacklisted');
+            msg('Use "bank blacklist mode" to disable');
+          } else {
+            msg('Blacklist mode disabled');
+          }
+          break;
+        case 'clear':
+          msg('Blacklist cleared');
+          blacklist.clear();
+          saveConfig();
+          break;
+        case 'list':
+          if (blacklist.size == 0) {
+            msg('Blacklist is empty.');
+          } else {
+            msg('Blacklist items:');
+            for (let item of blacklist)
+              msg(item);
+          }
+          break;
+      }
+    } else {
+      argsError();
+    }
+  }
+
+  function tryBlacklistNext(item, store) {
+    if (blacklistMode == BlacklistModes.ADD || (blacklistMode == BlacklistModes.ANY && !store)) {
       blacklist.add(item.id);
       msg(`Item ${item.id} added to blacklist`);
-      blacklistNext = false;
+      saveConfig();
+    } else if (blacklistMode == BlacklistModes.REMOVE || (blacklistMode == BlacklistModes.ANY && store)) {
+      blacklist.delete(item.id);
+      msg(`Item ${item.id} removed from blacklist`);
+      saveConfig();
     }
+
+    if (blacklistMode != BlacklistModes.ANY)
+      blacklistMode = BlacklistModes.NONE;
   }
 
   function checkBankOpen() {
     if (currentContract != BANK_CONTRACT) {
       msg('Bank must be open to use banker module', ERROR);
-      return true;
+      return false;
     }
 
-    return false;
+    return true;
   }
 
   function autoDeposit(allTabs) {
@@ -342,6 +378,11 @@ module.exports = function Banker(mod) {
       rand += Math.random();
     }  
     return rand / 6;
+  }
+
+  function isNormalInteger(str) {
+    let n = Math.floor(Number(str));
+    return n !== Infinity && String(n) === str && n >= 0;
   }
 
   function msg(text, color) {
