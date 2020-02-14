@@ -2,7 +2,7 @@
 
 const DefaultSettings = {
     'human': false,
-    'allTabs': true,
+    'tab': false,
     'blacklist': []
 }
 

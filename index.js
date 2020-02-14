@@ -53,40 +53,17 @@ module.exports = function Banker(mod) {
         return;
     
     if (event.type == BANK_TYPE) {
-      mod.log('bank updated');
       currentContract = BANK_CONTRACT;
       bankInventory = event;
       if (onNextOffset) onNextOffset(event);
     }
   });
-
   mod.hook('C_GET_WARE_ITEM', 3, event => {
-    mod.log('get');
-    mod.log(event);
     tryBlacklistNext(event, false);
   });
-  mod.hook('C_GET_WARE_ITEM', 3, {filter:{fake: true}}, event => {
-    mod.log('get fake');
-    mod.log(event);
-  });
   mod.hook('C_PUT_WARE_ITEM', 3, event => {
-    mod.log('put');
-    mod.log(event);
     tryBlacklistNext(event, true);
   });
-  mod.hook('C_PUT_WARE_ITEM', 3, {filter:{fake: true}}, event => {
-    mod.log('put fake');
-    mod.log(event);
-  });
-
-  mod.hook('C_VIEW_WARE', 2, event => {
-    mod.log('view');
-    mod.log(event);
-  });
-  mod.hook('C_VIEW_WARE', 2, {filter:{fake: true}}, event => {
-    mod.log('view fake');
-    mod.log(event);
-  });   
 
   mod.command.add('bank', {
     $default() {
@@ -161,7 +138,6 @@ module.exports = function Banker(mod) {
   }
 
   function processBlacklistCommand(args) {
-    mod.log(args);
     if (args.length >= 1) {
       switch (args[0]) {
         case 'a':

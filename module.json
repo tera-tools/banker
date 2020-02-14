@@ -1,5 +1,5 @@
 {
-    "disableAutoUpdate": true,
+    "disableAutoUpdate": false,
     "author": "tera-tools",
     "options": {
         "niceName": "Banker",
@@ -14,11 +14,13 @@
     "supportUrl": "https://github.com/tera-tools/banker",
     "servers": ["https://raw.githubusercontent.com/tera-tools/banker/master/"],
     "name": "banker",
-    "description": "Bank items easier",
+    "description": "Deposit items faster",
     "packets": {
-      "S_VIEW_WARE_EX": 1,
-      "C_GET_WARE_ITEM": 3,
-      "C_PUT_WARE_ITEM": 3,
-      "C_VIEW_WARE": 2
+        "C_GET_WARE_ITEM": 3,
+        "C_PUT_WARE_ITEM": 3,
+        "C_VIEW_WARE": 2,
+        "S_CANCEL_CONTRACT": 1,
+        "S_REQUEST_CONTRACT": 1,
+        "S_VIEW_WARE_EX": 1
     }
 }
