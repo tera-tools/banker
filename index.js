@@ -309,11 +309,11 @@ module.exports = function Banker(mod) {
   }
 
   function loadConfig() {
-    blacklistNext = new Set(mod.settings.blacklist);
+    blacklist = new Set(mod.settings.blacklist);
   }
 
   function saveConfig() {
-    mod.settings.blacklist = Array.from(blacklistNext);
+    mod.settings.blacklist = Array.from(blacklist);
     mod.saveSettings();
   }
 
