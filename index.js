@@ -36,6 +36,9 @@ module.exports = function Banker(mod) {
     validateProtocolMap();
   });
 
+  if (disabled)
+    return;
+
   //started or closed contract (window)
   mod.hook('S_REQUEST_CONTRACT', 1, event => {
     if (mod.game.me.is(event.senderId)) {
@@ -318,6 +321,9 @@ module.exports = function Banker(mod) {
   }
 
   function validateProtocolMap() {
+    if (disabled)
+      return;
+
     try {
       let missing = [];
       disabled = false;
