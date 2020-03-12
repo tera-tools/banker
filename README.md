@@ -4,8 +4,8 @@ Depositing items made easier.
 Banker removes the tedium of depositing commonly acquired items. It works by automatically storing inventory items that are also in your bank. Banker will not touch any inventory items that are not already in your bank and it will ignore any items in pouches.
 
 ## Installation
-- Copy all files from `protocol/defs/` into tera-data at `TeraToolbox/node_modules/tera-data/protocol`
-- Copy or merge the map file from `protocol/map/` into tera-data at `TeraToolbox/node_modules/tera-data/map`  
+- Copy all files from `protocol/defs/` into tera-data at `TeraToolbox/data/definitions`
+- Copy or merge the map file from `protocol/map/` into tera-data at `TeraToolbox/data/opcodes`  
   (Use the map file for your version of Tera. If you are not sure just copy them all.)
 
 ## Usage
