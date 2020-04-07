@@ -1,4 +1,5 @@
 module.exports = function Banker(mod) {
+  mod.game.initialize(['me', 'inventory']);
   const BANK_CONTRACT = 26;
   const BANK_TYPE = 1;
   const BANK_PAGE_SLOTS = 72;
