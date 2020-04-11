@@ -1,5 +1,5 @@
 {
-    "disableAutoUpdate": true,
+    "disableAutoUpdate": false,
     "author": "tera-tools",
     "options": {
         "niceName": "Banker",
