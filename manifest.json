@@ -6,8 +6,10 @@
         "protocols/defs/C_PUT_WARE_ITEM.3.def": "4607d4e9ee6425d1813898d516e823033d857c210382fda5c48e2b1e983cba96",
         "protocols/defs/S_VIEW_WARE_EX.1.def": "61eb75559653cae40917db5c1475f43312d37c0a1c54338b306ff22fdce9e164",
         "protocols/map/protocol.343506.map": "3be042692ca746e0eb1f1a8e0eec6145aa28a83e4a1e9000ead696526e65e665",
-        "protocols/map/protocol.365097.map": "1ad3b92bee791acb6a5686641be8be9d8e9bafe1b3d23d3564a984ef5e6c5dcb",
-        "protocols/map/protocol.365098.map": "e0fe73f2cc85854e092bca83f562b6ef6a09b7db482942b9c3a718e8b826e541",
+        "protocols/map/protocol.366221.map": "d16c6928d682c6be789e64a11bc53475301f7eeaa27dc663f267cd7f9e2f7a45",
+        "protocols/map/protocol.366222.map": "1baf81b9f9df2cd41234fdf93f03a334dbbc2712f8f31af288b2781d05a9716c",
+        "protocols/map/protocol.366225.map": "67645caff57e34cef29e8bd4142ff40dc5ca45d1be128b44bc09be4c1616552f",
+        "protocols/map/protocol.366226.map": "61c009cdda25ddad4b05620d559eeb2ef43acf6b9663851f794a5fb34aab288b",
         "settings.js": "74c01c33452fcd41275dbb232c3e431eb1d0c0fa912330cced537d9e43ce1ce3"
     },
     "defs": {
